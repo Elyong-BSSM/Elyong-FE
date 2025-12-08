@@ -1,13 +1,15 @@
+// src/pages/Dashboard.jsx
 import { useState } from 'react';
-import { FaPlus, FaRegClock, FaTrash } from 'react-icons/fa';
-import { formatDays } from '../utils/format';
+import { Link } from 'react-router-dom'; // 페이지 이동 링크
+import { FaPlus, FaRegClock, FaTrash } from 'react-icons/fa'; // 아이콘
+import { formatDays } from '../utils/format'; // 요일 변환 함수
 
 const Dashboard = () => {
   // 1. 상태 관리
-  const [selectedId, setSelectedId] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [selectedId, setSelectedId] = useState(null); // 선택된 알람 ID
+  const [isEditing, setIsEditing] = useState(false);  // 편집 모드 여부
 
-  // 더미 데이터 (시안에 있는 10:80, 07:00 반영)
+  // 더미 데이터 (초기 상태)
   const [alarms, setAlarms] = useState([
     {
       id: 1,
@@ -29,10 +31,10 @@ const Dashboard = () => {
     }
   ]);
 
-  // 폼 데이터
+  // 폼 데이터 (입력값)
   const [formData, setFormData] = useState({
     time: "07:00",
-    days: Array(7).fill(false),
+    days: Array(7).fill(false), // [false, false, ...]
     audio: "basic",
     minEyeSize: 50,
     goalScore: 50
@@ -40,10 +42,11 @@ const Dashboard = () => {
 
   const dayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 
-  // (+) 버튼: 새 알람
+  // (+) 버튼: 새 알람 만들기 모드
   const handleAddNew = () => {
     setSelectedId(null);
     setIsEditing(true);
+    // 폼 초기화
     setFormData({
       time: "07:00",
       days: Array(7).fill(false),
@@ -53,11 +56,14 @@ const Dashboard = () => {
     });
   };
 
-  // 알람 카드 클릭 (수정 모드)
+  // 알람 카드 클릭: 수정 모드
   const handleSelectAlarm = (alarm) => {
     setSelectedId(alarm.id);
     setIsEditing(true);
+    
+    // "1110000" 문자열 -> [true, true...] 배열 변환
     const daysArray = alarm.date.split('').map(char => char !== '-');
+    
     setFormData({
       time: alarm.time,
       days: daysArray,
@@ -67,42 +73,61 @@ const Dashboard = () => {
     });
   };
 
-  // 폼 핸들러
+  // 폼 입력값 변경 핸들러
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // 요일 버튼 토글
   const toggleDay = (index) => {
     const newDays = [...formData.days];
     newDays[index] = !newDays[index];
     handleChange('days', newDays);
   };
 
+  // 저장 버튼 (생성 및 수정 통합)
   const handleSave = () => {
     const dateString = formData.days.map(d => d ? '1' : '-').join('');
+    
     if (selectedId) {
+      // 수정
       setAlarms(alarms.map(alarm => 
-        alarm.id === selectedId ? { ...alarm, ...formData, date: dateString } : alarm
+        alarm.id === selectedId 
+          ? { ...alarm, ...formData, date: dateString } 
+          : alarm
       ));
     } else {
-      const newAlarm = { id: Date.now(), ...formData, date: dateString, enabled: true };
+      // 생성
+      const newAlarm = { 
+        id: Date.now(), 
+        ...formData, 
+        date: dateString, 
+        enabled: true 
+      };
       setAlarms([...alarms, newAlarm]);
     }
+    
+    // 저장 후 초기화
     setIsEditing(false);
     setSelectedId(null);
   };
 
+  // 삭제 버튼
   const handleDelete = (e, id) => {
-    e.stopPropagation();
+    e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
     if(window.confirm("정말 삭제하시겠습니까?")) {
       setAlarms(alarms.filter(a => a.id !== id));
-      if (selectedId === id) { setIsEditing(false); setSelectedId(null); }
+      // 만약 수정 중이던 알람을 삭제했다면 폼 닫기
+      if (selectedId === id) {
+        setIsEditing(false);
+        setSelectedId(null);
+      }
     }
   };
 
-  // ⭐ 토글 버튼 전용 핸들러 (UI 즉시 반영)
+  // 토글 스위치 (ON/OFF)
   const handleToggle = (e, id) => {
-    e.stopPropagation(); // 카드 클릭 이벤트 막기
+    e.stopPropagation();
     setAlarms(alarms.map(alarm => 
       alarm.id === id ? { ...alarm, enabled: !alarm.enabled } : alarm
     ));
@@ -110,19 +135,26 @@ const Dashboard = () => {
 
   return (
     <div style={styles.container}>
+      {/* 헤더 */}
       <header style={styles.header}>
         <div style={styles.logoArea}>
           <FaRegClock style={{ marginRight: '10px', color: '#a29bfe' }} /> 
           <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>Elyong</span>
         </div>
-        <div style={styles.authLinks}>LOGIN | SIGN UP</div>
+        <div style={styles.authLinks}>
+          <Link to="/login" style={styles.link}>LOGIN</Link>
+          <span style={{ margin: '0 10px', color: '#555' }}>|</span>
+          <Link to="/signup" style={styles.link}>SIGN UP</Link>
+        </div>
       </header>
 
       <div style={styles.body}>
-        {/* 왼쪽 패널: 알람 리스트 */}
+        {/* [왼쪽 패널] 알람 리스트 */}
         <div style={styles.leftPanel}>
           <div style={styles.plusContainer}>
-             <button style={styles.plusBtn} onClick={handleAddNew}><FaPlus /></button>
+             <button style={styles.plusBtn} onClick={handleAddNew}>
+               <FaPlus />
+             </button>
           </div>
 
           <div style={styles.alarmList}>
@@ -132,32 +164,34 @@ const Dashboard = () => {
                 onClick={() => handleSelectAlarm(alarm)}
                 style={{
                   ...styles.alarmCard,
-                  // 선택된 알람이면 테두리 표시
                   border: selectedId === alarm.id ? '1px solid #a29bfe' : '1px solid transparent'
                 }}
               >
-                {/* 시간 및 요일 텍스트 */}
+                {/* 알람 정보 (시간, 날짜) */}
                 <div style={styles.cardInfo}>
                   <div style={{
                     ...styles.cardTime,
-                    color: alarm.enabled ? '#fff' : '#666' // ON이면 흰색, OFF면 회색
+                    color: alarm.enabled ? '#fff' : '#666'
                   }}>
                     {alarm.time}
                   </div>
                   <div style={styles.cardDate}>{formatDays(alarm.date)}</div>
                 </div>
 
-                {/* 우측 컨트롤 (휴지통 + 토글) */}
+                {/* 우측 컨트롤 (휴지통, 토글) */}
                 <div style={styles.cardActions}>
-                   <button style={styles.deleteBtn} onClick={(e) => handleDelete(e, alarm.id)}>
+                   <button 
+                     style={styles.deleteBtn} 
+                     onClick={(e) => handleDelete(e, alarm.id)}
+                   >
                      <FaTrash />
                    </button>
                    
-                   {/* ⭐ 커스텀 토글 스위치 */}
+                   {/* 커스텀 토글 스위치 */}
                    <div 
                      style={{
                        ...styles.toggleTrack,
-                       backgroundColor: alarm.enabled ? '#8c7ae6' : '#555' // 켜지면 보라색
+                       backgroundColor: alarm.enabled ? '#8c7ae6' : '#555'
                      }}
                      onClick={(e) => handleToggle(e, alarm.id)}
                    >
@@ -172,51 +206,90 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* 오른쪽 패널: 설정 폼 */}
+        {/* [오른쪽 패널] 설정 폼 */}
         <div style={styles.rightPanel}>
           {!isEditing ? (
             <div style={styles.emptyState}>
-              <p>알람을 선택하거나 (+) 버튼을 누르세요.</p>
+              <p>알람을 선택하거나<br/>(+) 버튼을 눌러 추가하세요.</p>
             </div>
           ) : (
             <div style={styles.formContainer}>
-              <h3 style={styles.formTitle}>{selectedId ? 'EDIT ALARM' : 'NEW ALARM'}</h3>
+              <h3 style={styles.formTitle}>
+                {selectedId ? 'EDIT ALARM' : 'NEW ALARM'}
+              </h3>
               
+              {/* 시간 설정 */}
               <div style={styles.formGroup}>
                 <label style={styles.label}>시간</label>
-                <input type="time" value={formData.time} onChange={(e) => handleChange('time', e.target.value)} style={styles.inputTime}/>
+                <input 
+                  type="time" 
+                  value={formData.time} 
+                  onChange={(e) => handleChange('time', e.target.value)} 
+                  style={styles.inputTime}
+                />
               </div>
 
+              {/* 요일 설정 */}
               <div style={styles.formGroup}>
                 <label style={styles.label}>요일</label>
                 <div style={styles.daySelector}>
                   {dayLabels.map((day, idx) => (
-                    <button key={day} onClick={() => toggleDay(idx)} style={{...styles.dayBtn, background: formData.days[idx] ? '#a29bfe' : '#333', color: formData.days[idx] ? '#fff' : '#888'}}>
+                    <button 
+                      key={day} 
+                      onClick={() => toggleDay(idx)} 
+                      style={{
+                        ...styles.dayBtn, 
+                        background: formData.days[idx] ? '#a29bfe' : '#333', 
+                        color: formData.days[idx] ? '#fff' : '#888'
+                      }}
+                    >
                       {day}
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* 알람음 설정 */}
               <div style={styles.formGroup}>
                 <label style={styles.label}>음향</label>
-                <select style={styles.select} value={formData.audio} onChange={(e) => handleChange('audio', e.target.value)}>
+                <select 
+                  style={styles.select} 
+                  value={formData.audio} 
+                  onChange={(e) => handleChange('audio', e.target.value)}
+                >
                   <option value="basic">기본 알람</option>
                   <option value="sans">샌즈전 브금</option>
                   <option value="army">기상 나팔</option>
                 </select>
               </div>
 
+              {/* 눈 크기 설정 */}
               <div style={styles.formGroup}>
-                <div style={styles.labelRow}><label style={styles.label}>눈 크기 ({formData.minEyeSize}%)</label></div>
-                <input type="range" min="0" max="100" value={formData.minEyeSize} onChange={(e) => handleChange('minEyeSize', e.target.value)} style={styles.slider}/>
+                <div style={styles.labelRow}>
+                  <label style={styles.label}>눈 크기 ({formData.minEyeSize}%)</label>
+                </div>
+                <input 
+                  type="range" min="0" max="100" 
+                  value={formData.minEyeSize} 
+                  onChange={(e) => handleChange('minEyeSize', e.target.value)} 
+                  style={styles.slider}
+                />
               </div>
 
+              {/* 목표 점수 설정 */}
               <div style={styles.formGroup}>
-                <div style={styles.labelRow}><label style={styles.label}>목표 점수 ({formData.goalScore})</label></div>
-                <input type="range" min="0" max="1000" step="10" value={formData.goalScore} onChange={(e) => handleChange('goalScore', e.target.value)} style={styles.slider}/>
+                <div style={styles.labelRow}>
+                  <label style={styles.label}>목표 점수 ({formData.goalScore})</label>
+                </div>
+                <input 
+                  type="range" min="0" max="1000" step="10" 
+                  value={formData.goalScore} 
+                  onChange={(e) => handleChange('goalScore', e.target.value)} 
+                  style={styles.slider}
+                />
               </div>
 
+              {/* 저장 버튼 */}
               <button style={styles.saveBtn} onClick={handleSave}>SAVE</button>
             </div>
           )}
@@ -226,11 +299,13 @@ const Dashboard = () => {
   );
 };
 
+// --- CSS 스타일 ---
 const styles = {
   container: { height: '100vh', backgroundColor: '#1e1e1e', color: '#fff', display: 'flex', flexDirection: 'column' },
   header: { height: '60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 30px', borderBottom: '1px solid #333' },
   logoArea: { display: 'flex', alignItems: 'center' },
-  authLinks: { fontSize: '0.8rem', color: '#aaa', letterSpacing: '1px' },
+  authLinks: { fontSize: '0.8rem', color: '#aaa', letterSpacing: '1px', display: 'flex', alignItems: 'center' },
+  link: { textDecoration: 'none', color: '#aaa', cursor: 'pointer', fontWeight: 'bold', transition: '0.2s' },
   
   body: { flex: 1, display: 'flex' },
   
@@ -241,7 +316,7 @@ const styles = {
   
   alarmList: { width: '100%', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' },
   
-  // 알람 카드 스타일 (디자인 이미지 반영)
+  // 알람 카드
   alarmCard: { 
     width: '100%', maxWidth: '450px', 
     backgroundColor: '#252525', 
@@ -261,7 +336,7 @@ const styles = {
   cardActions: { display: 'flex', alignItems: 'center', gap: '20px' },
   deleteBtn: { background: 'none', border: 'none', color: '#d63031', fontSize: '1.2rem', cursor: 'pointer', opacity: 0.6 },
   
-  // 토글 스위치 (ON: 보라색, OFF: 회색)
+  // 커스텀 토글 스위치
   toggleTrack: { 
     width: '50px', height: '26px', 
     borderRadius: '15px', 
@@ -280,7 +355,7 @@ const styles = {
 
   // 오른쪽 패널
   rightPanel: { flex: 1, backgroundColor: '#252525', padding: '40px', borderLeft: '1px solid #333' },
-  emptyState: { height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#555' },
+  emptyState: { height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#555', textAlign: 'center' },
   formContainer: { display: 'flex', flexDirection: 'column', gap: '30px' },
   formTitle: { fontSize: '1.5rem', fontWeight: 'bold', color: '#ddd', marginBottom: '10px' },
   formGroup: { display: 'flex', flexDirection: 'column', gap: '10px' },
